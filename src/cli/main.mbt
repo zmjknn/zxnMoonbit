@@ -11,7 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-\npub fn main() {
+
+fn main {
   let demo = "## MoonMark\n一个纯 MoonBit 实现的解析器！"
   let parser = @parser.Parser::new(demo)
   let ast = parser.parse()

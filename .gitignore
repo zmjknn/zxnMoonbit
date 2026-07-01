@@ -1,1 +1,4 @@
-target/\n.moon/\n*.wasm
+target/
+.moon/
+_build/
+*.wasm
