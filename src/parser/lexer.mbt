@@ -12,19 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 pub struct Lexer {
   input : String
   mut pos : Int
 }
 
+///|
 pub fn Lexer::new(input : String) -> Lexer {
   { input, pos: 0 }
 }
 
+///|
 pub fn Lexer::is_eof(self : Lexer) -> Bool {
   self.pos >= self.input.length()
 }
 
+///|
 pub fn Lexer::peek(self : Lexer) -> Char {
   if self.is_eof() {
     '\u0000'
@@ -36,12 +40,14 @@ pub fn Lexer::peek(self : Lexer) -> Char {
   }
 }
 
+///|
 pub fn Lexer::advance(self : Lexer) -> Unit {
   if !self.is_eof() {
     self.pos = self.pos + 1
   }
 }
 
+///|
 pub fn Lexer::skip_whitespace(self : Lexer) -> Unit {
   while !self.is_eof() {
     let ch = self.peek()

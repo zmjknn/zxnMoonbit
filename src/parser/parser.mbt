@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 pub struct Parser {
   lexer : Lexer
 }
 
+///|
 pub fn Parser::new(input : String) -> Parser {
   { lexer: Lexer::new(input) }
 }
 
+///|
 fn Parser::parse_heading(self : Parser) -> @ast.Block? {
   self.lexer.skip_whitespace()
   let mut level = 0
@@ -42,6 +45,7 @@ fn Parser::parse_heading(self : Parser) -> @ast.Block? {
   None
 }
 
+///|
 fn Parser::parse_fenced_code_block(self : Parser) -> @ast.Block? {
   self.lexer.skip_whitespace()
   if self.lexer.peek() != '`' {
@@ -55,7 +59,7 @@ fn Parser::parse_fenced_code_block(self : Parser) -> @ast.Block? {
   if count < 3 {
     return None
   }
-  
+
   let mut info = ""
   while self.lexer.peek() != '\n' && !self.lexer.is_eof() {
     info = info + self.lexer.peek().to_string()
@@ -64,7 +68,7 @@ fn Parser::parse_fenced_code_block(self : Parser) -> @ast.Block? {
   if self.lexer.peek() == '\n' {
     self.lexer.advance()
   }
-  
+
   let mut code = ""
   while !self.lexer.is_eof() {
     let saved_pos = self.lexer.pos
@@ -73,7 +77,8 @@ fn Parser::parse_fenced_code_block(self : Parser) -> @ast.Block? {
       close_count = close_count + 1
       self.lexer.advance()
     }
-    if close_count >= count && (self.lexer.peek() == '\n' || self.lexer.is_eof()) {
+    if close_count >= count &&
+      (self.lexer.peek() == '\n' || self.lexer.is_eof()) {
       if self.lexer.peek() == '\n' {
         self.lexer.advance()
       }
@@ -86,6 +91,7 @@ fn Parser::parse_fenced_code_block(self : Parser) -> @ast.Block? {
   Some(@ast.CodeBlock(info.trim().to_owned(), code))
 }
 
+///|
 fn Parser::parse_blockquote(self : Parser) -> @ast.Block? {
   self.lexer.skip_whitespace()
   if self.lexer.peek() != '>' {
@@ -95,7 +101,7 @@ fn Parser::parse_blockquote(self : Parser) -> @ast.Block? {
   if self.lexer.peek() == ' ' {
     self.lexer.advance()
   }
-  
+
   let mut inner = ""
   while !self.lexer.is_eof() {
     let ch = self.lexer.peek()
@@ -117,11 +123,12 @@ fn Parser::parse_blockquote(self : Parser) -> @ast.Block? {
   Some(@ast.Blockquote(inner_p.parse().blocks))
 }
 
+///|
 fn Parser::parse_list(self : Parser) -> @ast.Block? {
   self.lexer.skip_whitespace()
   let ch = self.lexer.peek()
   let is_ordered = ch >= '0' && ch <= '9'
-  
+
   let mut is_list = false
   if is_ordered {
     let saved = self.lexer.pos
@@ -148,11 +155,11 @@ fn Parser::parse_list(self : Parser) -> @ast.Block? {
       self.lexer.pos = saved
     }
   }
-  
+
   if !is_list {
     return None
   }
-  
+
   let items = []
   let mut current_item = ""
   while !self.lexer.is_eof() {
@@ -179,7 +186,7 @@ fn Parser::parse_list(self : Parser) -> @ast.Block? {
       } else {
         next_next_ch == '-' || next_next_ch == '*' || next_next_ch == '+'
       }
-      
+
       if is_next_item {
         let item_p = Parser::new(current_item)
         items.push(item_p.parse().blocks)
@@ -206,10 +213,11 @@ fn Parser::parse_list(self : Parser) -> @ast.Block? {
     let item_p = Parser::new(current_item)
     items.push(item_p.parse().blocks)
   }
-  
+
   Some(@ast.List(is_ordered, items))
 }
 
+///|
 fn Parser::parse_paragraph(self : Parser) -> @ast.Block? {
   let mut content = ""
   while !self.lexer.is_eof() {
@@ -231,6 +239,7 @@ fn Parser::parse_paragraph(self : Parser) -> @ast.Block? {
   None
 }
 
+///|
 pub fn Parser::parse(self : Parser) -> @ast.Document {
   let blocks = []
   while !self.lexer.is_eof() {
@@ -238,7 +247,7 @@ pub fn Parser::parse(self : Parser) -> @ast.Document {
     if self.lexer.is_eof() {
       break
     }
-    
+
     let saved = self.lexer.pos
     match self.parse_heading() {
       Some(h) => {
@@ -247,7 +256,7 @@ pub fn Parser::parse(self : Parser) -> @ast.Document {
       }
       None => self.lexer.pos = saved
     }
-    
+
     match self.parse_fenced_code_block() {
       Some(c) => {
         blocks.push(c)
@@ -255,7 +264,7 @@ pub fn Parser::parse(self : Parser) -> @ast.Document {
       }
       None => self.lexer.pos = saved
     }
-    
+
     match self.parse_blockquote() {
       Some(b) => {
         blocks.push(b)
@@ -263,7 +272,7 @@ pub fn Parser::parse(self : Parser) -> @ast.Document {
       }
       None => self.lexer.pos = saved
     }
-    
+
     match self.parse_list() {
       Some(l) => {
         blocks.push(l)
@@ -271,11 +280,11 @@ pub fn Parser::parse(self : Parser) -> @ast.Document {
       }
       None => self.lexer.pos = saved
     }
-    
+
     match self.parse_paragraph() {
       Some(p) => blocks.push(p)
       None => self.lexer.advance()
     }
   }
-  @ast.Document::{ blocks }
+  @ast.Document::{ blocks, }
 }

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 fn main {
   let demo = "## MoonMark\n一个纯 MoonBit 实现的解析器！"
   let parser = @parser.Parser::new(demo)

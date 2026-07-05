@@ -1,0 +1,7 @@
+import {
+  "zmjknn/moonmark/src/ast",
+}
+
+options(
+  is_main: false,
+)
