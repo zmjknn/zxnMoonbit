@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 pub(all) enum Inline {
   Text(String)
   Strong(Array[Inline])
@@ -21,6 +22,7 @@ pub(all) enum Inline {
   Image(String, String)
 }
 
+///|
 pub(all) enum Block {
   Heading(Int, Array[Inline])
   Paragraph(Array[Inline])
@@ -29,6 +31,7 @@ pub(all) enum Block {
   List(Bool, Array[Array[Block]])
 }
 
+///|
 pub(all) struct Document {
   blocks : Array[Block]
 }

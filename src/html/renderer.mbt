@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 pub struct Renderer {
   mut out : String
 }
 
+///|
 pub fn Renderer::new() -> Renderer {
   { out: "" }
 }
 
+///|
 pub fn Renderer::render(self : Renderer, doc : @ast.Document) -> String {
   self.out = ""
   for i = 0; i < doc.blocks.length(); i = i + 1 {
@@ -28,6 +31,7 @@ pub fn Renderer::render(self : Renderer, doc : @ast.Document) -> String {
   self.out
 }
 
+///|
 fn Renderer::render_block(self : Renderer, block : @ast.Block) -> Unit {
   match block {
     @ast.Heading(level, inlines) => {
@@ -53,7 +57,12 @@ fn Renderer::render_block(self : Renderer, block : @ast.Block) -> Unit {
       } else {
         ""
       }
-      self.out = self.out + "<pre><code" + lang_class + ">" + escape_html(code) + "</code></pre>\n"
+      self.out = self.out +
+        "<pre><code" +
+        lang_class +
+        ">" +
+        escape_html(code) +
+        "</code></pre>\n"
     }
     @ast.List(is_ordered, items) => {
       let tag = if is_ordered { "ol" } else { "ul" }
@@ -71,7 +80,11 @@ fn Renderer::render_block(self : Renderer, block : @ast.Block) -> Unit {
   }
 }
 
-fn Renderer::render_inlines(self : Renderer, inlines : Array[@ast.Inline]) -> Unit {
+///|
+fn Renderer::render_inlines(
+  self : Renderer,
+  inlines : Array[@ast.Inline],
+) -> Unit {
   for i = 0; i < inlines.length(); i = i + 1 {
     match inlines[i] {
       @ast.Text(s) => self.out = self.out + escape_html(s)
@@ -85,15 +98,20 @@ fn Renderer::render_inlines(self : Renderer, inlines : Array[@ast.Inline]) -> Un
         self.render_inlines(inner)
         self.out = self.out + "</em>"
       }
-      @ast.CodeSpan(c) => self.out = self.out + "<code>" + escape_html(c) + "</code>"
+      @ast.CodeSpan(c) =>
+        self.out = self.out + "<code>" + escape_html(c) + "</code>"
       @ast.Link(url, inner) => {
         self.out = self.out + "<a href=\"" + escape_html(url) + "\">"
         self.render_inlines(inner)
         self.out = self.out + "</a>"
       }
-      @ast.Image(url, alt) => {
-        self.out = self.out + "<img src=\"" + escape_html(url) + "\" alt=\"" + escape_html(alt) + "\">"
-      }
+      @ast.Image(url, alt) =>
+        self.out = self.out +
+          "<img src=\"" +
+          escape_html(url) +
+          "\" alt=\"" +
+          escape_html(alt) +
+          "\">"
     }
   }
 }

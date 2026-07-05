@@ -1,0 +1,8 @@
+import {
+  "zmjknn/moonmark/src/parser",
+  "zmjknn/moonmark/src/html",
+}
+
+options(
+  is_main: true,
+)

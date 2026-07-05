@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///|
 pub fn escape_html(s : String) -> String {
   let mut res = ""
   for i = 0; i < s.length(); i = i + 1 {
