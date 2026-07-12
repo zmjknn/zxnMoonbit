@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "zmjknn/moonmark/src/html"
+
+import {
+  "zmjknn/moonmark/src/ast",
+}
+
+// Values
+pub fn escape_html(String) -> String
+
+// Errors
+
+// Types and methods
+pub struct Renderer {
+  mut out : String
+}
+pub fn Renderer::new() -> Self
+pub fn Renderer::render(Self, @ast.Document) -> String
+
+// Type aliases
+
+// Traits
+

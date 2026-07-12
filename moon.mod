@@ -7,3 +7,7 @@ description = "高性能纯 MoonBit Markdown 解析与渲染器"
 license = "Apache-2.0"
 
 repository = "https://github.com/zmjknn/zxnMoonbit"
+
+import {
+  "moonbitlang/x@0.4.46",
+}

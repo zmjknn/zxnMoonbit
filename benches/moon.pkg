@@ -1,6 +1,7 @@
 import {
-  "zmjknn/moonmark/src/ast",
+  "zmjknn/moonmark/src/parser",
   "zmjknn/moonmark/src/html",
+  "moonbitlang/core/bench",
 }
 
 options(
