@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn parse_inline(String, @ast.Position) -> Array[@ast.Inline]
+pub fn parse_inline(StringView, @ast.Position) -> Array[@ast.Inline]
 
 // Errors
 
