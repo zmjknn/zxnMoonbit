@@ -13,14 +13,15 @@
 // limitations under the License.
 
 ///|
-pub fn escape_html(s : String) -> String {
+pub fn escape_html(sv : StringView) -> String {
   let mut res = ""
   let mut start = 0
-  for i = 0; i < s.length(); i = i + 1 {
-    let ch = s[i]
+  let len = sv.length()
+  for i = 0; i < len; i = i + 1 {
+    let ch = sv[i]
     if ch == 60 || ch == 62 || ch == 38 || ch == 34 || ch == 39 {
       if i > start {
-        res = res + s[start:i].to_owned()
+        res = res + sv[start:i].to_owned()
       }
       match ch {
         60 => res = res + "&lt;"
@@ -33,8 +34,8 @@ pub fn escape_html(s : String) -> String {
       start = i + 1
     }
   }
-  if s.length() > start {
-    res = res + s[start:s.length()].to_owned()
+  if len > start {
+    res = res + sv[start:len].to_owned()
   }
   res
 }

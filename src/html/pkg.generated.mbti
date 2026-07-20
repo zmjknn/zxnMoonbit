@@ -6,7 +6,9 @@ import {
 }
 
 // Values
-pub fn escape_html(String) -> String
+pub fn escape_html(StringView) -> String
+
+pub fn sanitize_url(StringView) -> String
 
 // Errors
 
