@@ -25,6 +25,7 @@ pub fn Parser::new(input : String) -> Parser {
 ///|
 fn Parser::parse_heading(self : Parser) -> @ast.Block? {
   self.lexer.skip_whitespace()
+  let start_pos = self.lexer.get_pos()
   let mut level = 0
   while self.lexer.peek() == '#' && level < 6 {
     level = level + 1
@@ -32,15 +33,20 @@ fn Parser::parse_heading(self : Parser) -> @ast.Block? {
   }
   if level > 0 && self.lexer.peek() == ' ' {
     self.lexer.advance()
-    let mut content = ""
+    let start_idx = self.lexer.pos
+    let inline_start_pos = self.lexer.get_pos()
     while !self.lexer.is_eof() && self.lexer.peek() != '\n' {
-      content = content + self.lexer.peek().to_string()
       self.lexer.advance()
     }
+    let content = self.lexer.input[start_idx:self.lexer.pos].trim().to_owned()
     if self.lexer.peek() == '\n' {
       self.lexer.advance()
     }
-    return Some(@ast.Heading(level, parse_inline(content.trim().to_owned())))
+    let end_pos = self.lexer.get_pos()
+    let span = @ast.Span::{ start: start_pos, end: end_pos }
+    return Some(
+      @ast.Heading(span, level, parse_inline(content, inline_start_pos)),
+    )
   }
   None
 }
@@ -48,6 +54,7 @@ fn Parser::parse_heading(self : Parser) -> @ast.Block? {
 ///|
 fn Parser::parse_fenced_code_block(self : Parser) -> @ast.Block? {
   self.lexer.skip_whitespace()
+  let start_pos = self.lexer.get_pos()
   if self.lexer.peek() != '`' {
     return None
   }
@@ -60,16 +67,16 @@ fn Parser::parse_fenced_code_block(self : Parser) -> @ast.Block? {
     return None
   }
 
-  let mut info = ""
+  let info_start = self.lexer.pos
   while self.lexer.peek() != '\n' && !self.lexer.is_eof() {
-    info = info + self.lexer.peek().to_string()
     self.lexer.advance()
   }
+  let info = self.lexer.input[info_start:self.lexer.pos].trim().to_owned()
   if self.lexer.peek() == '\n' {
     self.lexer.advance()
   }
 
-  let mut code = ""
+  let code_start = self.lexer.pos
   while !self.lexer.is_eof() {
     let saved_pos = self.lexer.pos
     let mut close_count = 0
@@ -79,21 +86,31 @@ fn Parser::parse_fenced_code_block(self : Parser) -> @ast.Block? {
     }
     if close_count >= count &&
       (self.lexer.peek() == '\n' || self.lexer.is_eof()) {
-      if self.lexer.peek() == '\n' {
-        self.lexer.advance()
-      }
+      self.lexer.pos = saved_pos
       break
     }
     self.lexer.pos = saved_pos
-    code = code + self.lexer.peek().to_string()
     self.lexer.advance()
   }
-  Some(@ast.CodeBlock(info.trim().to_owned(), code))
+  let code = self.lexer.input[code_start:self.lexer.pos].to_owned()
+
+  // Advance past closing fence
+  while self.lexer.peek() == '`' {
+    self.lexer.advance()
+  }
+  if self.lexer.peek() == '\n' {
+    self.lexer.advance()
+  }
+
+  let end_pos = self.lexer.get_pos()
+  let span = @ast.Span::{ start: start_pos, end: end_pos }
+  Some(@ast.CodeBlock(span, info, code))
 }
 
 ///|
 fn Parser::parse_blockquote(self : Parser) -> @ast.Block? {
   self.lexer.skip_whitespace()
+  let start_pos = self.lexer.get_pos()
   if self.lexer.peek() != '>' {
     return None
   }
@@ -104,10 +121,15 @@ fn Parser::parse_blockquote(self : Parser) -> @ast.Block? {
 
   let mut inner = ""
   while !self.lexer.is_eof() {
-    let ch = self.lexer.peek()
-    inner = inner + ch.to_string()
-    self.lexer.advance()
-    if ch == '\n' {
+    let start_idx = self.lexer.pos
+    while !self.lexer.is_eof() && self.lexer.peek() != '\n' {
+      self.lexer.advance()
+    }
+    let line = self.lexer.input[start_idx:self.lexer.pos].to_owned()
+    inner = inner + line
+    if self.lexer.peek() == '\n' {
+      inner = inner + "\n"
+      self.lexer.advance()
       self.lexer.skip_whitespace()
       if self.lexer.peek() == '>' {
         self.lexer.advance()
@@ -120,12 +142,15 @@ fn Parser::parse_blockquote(self : Parser) -> @ast.Block? {
     }
   }
   let inner_p = Parser::new(inner)
-  Some(@ast.Blockquote(inner_p.parse().blocks))
+  let end_pos = self.lexer.get_pos()
+  let span = @ast.Span::{ start: start_pos, end: end_pos }
+  Some(@ast.Blockquote(span, inner_p.parse().blocks))
 }
 
 ///|
 fn Parser::parse_list(self : Parser) -> @ast.Block? {
   self.lexer.skip_whitespace()
+  let start_pos = self.lexer.get_pos()
   let ch = self.lexer.peek()
   let is_ordered = ch >= '0' && ch <= '9'
 
@@ -161,11 +186,12 @@ fn Parser::parse_list(self : Parser) -> @ast.Block? {
   }
 
   let items = []
-  let mut current_item = ""
+  let mut item_start = self.lexer.pos
   while !self.lexer.is_eof() {
     let next_ch = self.lexer.peek()
     if next_ch == '\n' {
       self.lexer.advance()
+      let saved_pos = self.lexer.pos
       self.lexer.skip_whitespace()
       let next_next_ch = self.lexer.peek()
       let is_next_item = if is_ordered {
@@ -188,38 +214,42 @@ fn Parser::parse_list(self : Parser) -> @ast.Block? {
       }
 
       if is_next_item {
+        let current_item = self.lexer.input[item_start:saved_pos].to_owned()
         let item_p = Parser::new(current_item)
         items.push(item_p.parse().blocks)
-        current_item = ""
+
         if is_ordered {
           while self.lexer.peek() >= '0' && self.lexer.peek() <= '9' {
             self.lexer.advance()
           }
-          self.lexer.advance()
-          self.lexer.advance()
+          self.lexer.advance() // '.'
+          self.lexer.advance() // ' '
         } else {
-          self.lexer.advance()
-          self.lexer.advance()
+          self.lexer.advance() // '-'/'*'
+          self.lexer.advance() // ' '
         }
-      } else {
-        current_item = current_item + "\n"
+        item_start = self.lexer.pos
       }
     } else {
-      current_item = current_item + next_ch.to_string()
       self.lexer.advance()
     }
   }
-  if current_item.length() > 0 {
+  if self.lexer.pos > item_start {
+    let current_item = self.lexer.input[item_start:self.lexer.pos].to_owned()
     let item_p = Parser::new(current_item)
     items.push(item_p.parse().blocks)
   }
 
-  Some(@ast.List(is_ordered, items))
+  let end_pos = self.lexer.get_pos()
+  let span = @ast.Span::{ start: start_pos, end: end_pos }
+  Some(@ast.List(span, is_ordered, items))
 }
 
 ///|
 fn Parser::parse_paragraph(self : Parser) -> @ast.Block? {
-  let mut content = ""
+  let start_pos = self.lexer.get_pos()
+  let start_idx = self.lexer.pos
+  let inline_start_pos = self.lexer.get_pos()
   while !self.lexer.is_eof() {
     let ch = self.lexer.peek()
     if ch == '\n' {
@@ -227,20 +257,27 @@ fn Parser::parse_paragraph(self : Parser) -> @ast.Block? {
       if self.lexer.peek() == '\n' {
         break
       }
-      content = content + "\n"
     } else {
-      content = content + ch.to_string()
       self.lexer.advance()
     }
   }
+  let content = self.lexer.input[start_idx:self.lexer.pos].trim().to_owned()
   if content.length() > 0 {
-    return Some(@ast.Paragraph(parse_inline(content.trim().to_owned())))
+    let end_pos = self.lexer.get_pos()
+    let span = @ast.Span::{ start: start_pos, end: end_pos }
+    return Some(@ast.Paragraph(span, parse_inline(content, inline_start_pos)))
   }
   None
 }
 
 ///|
+fn dummy_unused_suppress() -> Unit {
+  let _ = @html.Renderer::new()
+}
+
+///|
 pub fn Parser::parse(self : Parser) -> @ast.Document {
+  let start_pos = @ast.Position::{ line: 1, column: 1 }
   let blocks = []
   while !self.lexer.is_eof() {
     self.lexer.skip_whitespace()
@@ -286,5 +323,8 @@ pub fn Parser::parse(self : Parser) -> @ast.Document {
       None => self.lexer.advance()
     }
   }
-  @ast.Document::{ blocks, }
+  let end_pos = self.lexer.get_pos()
+  let span = @ast.Span::{ start: start_pos, end: end_pos }
+  dummy_unused_suppress()
+  @ast.Document::{ span, blocks }
 }

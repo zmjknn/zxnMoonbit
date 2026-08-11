@@ -1,0 +1,36 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "zmjknn/moonmark/src/parser"
+
+import {
+  "zmjknn/moonmark/src/ast",
+}
+
+// Values
+pub fn parse_inline(String, @ast.Position) -> Array[@ast.Inline]
+
+// Errors
+
+// Types and methods
+pub struct Lexer {
+  input : String
+  mut pos : Int
+  mut line : Int
+  mut col : Int
+}
+pub fn Lexer::advance(Self) -> Unit
+pub fn Lexer::get_pos(Self) -> @ast.Position
+pub fn Lexer::is_eof(Self) -> Bool
+pub fn Lexer::new(String) -> Self
+pub fn Lexer::peek(Self) -> Char
+pub fn Lexer::skip_whitespace(Self) -> Unit
+
+pub struct Parser {
+  lexer : Lexer
+}
+pub fn Parser::new(String) -> Self
+pub fn Parser::parse(Self) -> @ast.Document
+
+// Type aliases
+
+// Traits
+

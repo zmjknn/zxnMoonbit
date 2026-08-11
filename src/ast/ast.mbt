@@ -13,25 +13,38 @@
 // limitations under the License.
 
 ///|
+pub(all) struct Position {
+  line : Int
+  column : Int
+}
+
+///|
+pub(all) struct Span {
+  start : Position
+  end : Position
+}
+
+///|
 pub(all) enum Inline {
-  Text(String)
-  Strong(Array[Inline])
-  Emph(Array[Inline])
-  CodeSpan(String)
-  Link(String, Array[Inline])
-  Image(String, String)
+  Text(Span, String)
+  Strong(Span, Array[Inline])
+  Emph(Span, Array[Inline])
+  CodeSpan(Span, String)
+  Link(Span, String, Array[Inline])
+  Image(Span, String, String)
 }
 
 ///|
 pub(all) enum Block {
-  Heading(Int, Array[Inline])
-  Paragraph(Array[Inline])
-  Blockquote(Array[Block])
-  CodeBlock(String, String)
-  List(Bool, Array[Array[Block]])
+  Heading(Span, Int, Array[Inline])
+  Paragraph(Span, Array[Inline])
+  Blockquote(Span, Array[Block])
+  CodeBlock(Span, String, String)
+  List(Span, Bool, Array[Array[Block]])
 }
 
 ///|
 pub(all) struct Document {
+  span : Span
   blocks : Array[Block]
 }
