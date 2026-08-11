@@ -14,8 +14,17 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup MoonBit
-        uses: moonbitlang/setup-moonbit@v1
+      - name: Install MoonBit
+        shell: bash
+        run: |
+          curl --fail --location https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+          "$HOME/.moon/bin/moon" version
+
+      - name: Resolve MoonBit dependencies
+        run: |
+          moon update
+          moon install
 
       - name: Moon format check
         run: moon fmt --check
