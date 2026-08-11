@@ -1,6 +1,8 @@
 import {
   "zmjknn/moonmark/src/parser",
   "zmjknn/moonmark/src/html",
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
 }
 
 options(

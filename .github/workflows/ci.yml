@@ -1,10 +1,48 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Setup MoonBit
         uses: moonbitlang/setup-moonbit@v1
-      - run: moon test
+
+      - name: Moon CI Checks
+        shell: bash
+        run: |
+          # Helper wrapper to handle --deny-warn for fmt and info if the CLI doesn't support them
+          moon() {
+            if [ "$1" = "fmt" ] || [ "$1" = "info" ]; then
+              local args=()
+              for arg in "$@"; do
+                if [ "$arg" != "--deny-warn" ]; then
+                  args+=("$arg")
+                fi
+              done
+              command moon "${args[@]}"
+            else
+              command moon "$@"
+            fi
+          }
+          
+          echo "=== 1. Moon Check ==="
+          moon check --deny-warn
+          
+          echo "=== 2. Moon Fmt --deny-warn ==="
+          moon fmt --deny-warn
+          
+          echo "=== 3. Moon Info --deny-warn ==="
+          moon info --deny-warn
+          
+          echo "=== 4. Moon Test ==="
+          moon test --deny-warn

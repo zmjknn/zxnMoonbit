@@ -13,50 +13,134 @@
 // limitations under the License.
 
 ///|
-pub fn parse_inline(text : String) -> Array[@ast.Inline] {
+pub fn parse_inline(text : String, start_pos : @ast.Position) -> Array[@ast.Inline] {
   let inlines = []
   let mut i = 0
   let len = text.length()
+  
+  let mut line = start_pos.line
+  let mut col = start_pos.column
+
+  fn current_pos() -> @ast.Position {
+    { line, column: col }
+  }
+
+  fn advance_range(start_idx : Int, end_idx : Int) {
+    for idx = start_idx; idx < end_idx; idx = idx + 1 {
+      let ch = text[idx]
+      if ch == 10 { // '\n'
+        line = line + 1
+        col = 1
+      } else {
+        col = col + 1
+      }
+    }
+  }
 
   while i < len {
     let ch = text[i]
 
+    // Image: ![alt](url)
+    if ch == 33 && i + 1 < len && text[i + 1] == 91 { // '!' is 33, '[' is 91
+      let start_pos_span = current_pos()
+      let mut j = i + 2
+      let mut bracket_count = 1
+      while j < len {
+        if text[j] == 91 { // '['
+          bracket_count = bracket_count + 1
+        } else if text[j] == 93 { // ']'
+          bracket_count = bracket_count - 1
+          if bracket_count == 0 {
+            break
+          }
+        }
+        j = j + 1
+      }
+      if j + 1 < len && text[j + 1] == 40 { // '(' is 40
+        let mut k = j + 2
+        while k < len && text[k] != 41 { // ')' is 41
+          k = k + 1
+        }
+        if k < len {
+          let alt = text[i + 2:j].to_owned()
+          let url = text[j + 2:k].to_owned()
+          
+          advance_range(i, k + 1)
+          let end_pos_span = current_pos()
+          let span = @ast.Span::{ start: start_pos_span, end: end_pos_span }
+          inlines.push(@ast.Image(span, url, alt))
+          i = k + 1
+          continue
+        }
+      }
+    }
+
     // Code span: `code`
-    if ch == '`' {
+    if ch == 96 { // '`' is 96
+      let start_pos_span = current_pos()
       let mut j = i + 1
-      while j < len && text[j] != '`' {
+      while j < len && text[j] != 96 {
         j = j + 1
       }
       if j < len {
         let code = text[i + 1:j].to_owned()
-        inlines.push(@ast.CodeSpan(code))
+        advance_range(i, j + 1)
+        let end_pos_span = current_pos()
+        let span = @ast.Span::{ start: start_pos_span, end: end_pos_span }
+        inlines.push(@ast.CodeSpan(span, code))
         i = j + 1
         continue
       }
     }
 
     // Strong / Emph: **bold** or *italic*
-    if ch == '*' {
-      let is_strong = i + 1 < len && text[i + 1] == '*'
+    if ch == 42 { // '*' is 42
+      let is_strong = i + 1 < len && text[i + 1] == 42
       if is_strong {
+        let start_pos_span = current_pos()
         let mut j = i + 2
-        while j + 1 < len && !(text[j] == '*' && text[j + 1] == '*') {
+        while j + 1 < len && !(text[j] == 42 && text[j + 1] == 42) {
           j = j + 1
         }
         if j + 1 < len {
           let inner_text = text[i + 2:j].to_owned()
-          inlines.push(@ast.Strong(parse_inline(inner_text)))
+          
+          // Advance over standard prefix `**`
+          advance_range(i, i + 2)
+          let inner_start_pos = current_pos()
+          
+          // Parse inner inlines
+          let inner_inlines = parse_inline(inner_text, inner_start_pos)
+          
+          // Advance over inner text and closing `**`
+          advance_range(i + 2, j + 2)
+          let end_pos_span = current_pos()
+          let span = @ast.Span::{ start: start_pos_span, end: end_pos_span }
+          inlines.push(@ast.Strong(span, inner_inlines))
           i = j + 2
           continue
         }
       } else {
+        let start_pos_span = current_pos()
         let mut j = i + 1
-        while j < len && text[j] != '*' {
+        while j < len && text[j] != 42 {
           j = j + 1
         }
         if j < len {
           let inner_text = text[i + 1:j].to_owned()
-          inlines.push(@ast.Emph(parse_inline(inner_text)))
+          
+          // Advance over standard prefix `*`
+          advance_range(i, i + 1)
+          let inner_start_pos = current_pos()
+          
+          // Parse inner inlines
+          let inner_inlines = parse_inline(inner_text, inner_start_pos)
+          
+          // Advance over inner text and closing `*`
+          advance_range(i + 1, j + 1)
+          let end_pos_span = current_pos()
+          let span = @ast.Span::{ start: start_pos_span, end: end_pos_span }
+          inlines.push(@ast.Emph(span, inner_inlines))
           i = j + 1
           continue
         }
@@ -64,20 +148,42 @@ pub fn parse_inline(text : String) -> Array[@ast.Inline] {
     }
 
     // Link: [text](url)
-    if ch == '[' {
+    if ch == 91 { // '[' is 91
+      let start_pos_span = current_pos()
       let mut j = i + 1
-      while j < len && text[j] != ']' {
+      let mut bracket_count = 1
+      while j < len {
+        if text[j] == 91 { // '['
+          bracket_count = bracket_count + 1
+        } else if text[j] == 93 { // ']'
+          bracket_count = bracket_count - 1
+          if bracket_count == 0 {
+            break
+          }
+        }
         j = j + 1
       }
-      if j + 1 < len && text[j + 1] == '(' {
+      if j + 1 < len && text[j + 1] == 40 { // '(' is 40
         let mut k = j + 2
-        while k < len && text[k] != ')' {
+        while k < len && text[k] != 41 { // ')' is 41
           k = k + 1
         }
         if k < len {
           let link_text = text[i + 1:j].to_owned()
           let link_url = text[j + 2:k].to_owned()
-          inlines.push(@ast.Link(link_url, parse_inline(link_text)))
+          
+          // Advance over `[`
+          advance_range(i, i + 1)
+          let inner_start_pos = current_pos()
+          
+          // Parse inner inlines
+          let inner_inlines = parse_inline(link_text, inner_start_pos)
+          
+          // Advance over inner text and closing `](url)`
+          advance_range(i + 1, k + 1)
+          let end_pos_span = current_pos()
+          let span = @ast.Span::{ start: start_pos_span, end: end_pos_span }
+          inlines.push(@ast.Link(span, link_url, inner_inlines))
           i = k + 1
           continue
         }
@@ -85,20 +191,35 @@ pub fn parse_inline(text : String) -> Array[@ast.Inline] {
     }
 
     // Normal Text
+    let start_pos_span = current_pos()
     let mut j = i
     while j < len {
       let next_ch = text[j]
-      if next_ch == '`' || next_ch == '*' || next_ch == '[' {
+      // Check for delimiters: '`' (96), '*' (42), '[' (91), '!' (33) followed by '[' (91)
+      if next_ch == 96 || next_ch == 42 || next_ch == 91 {
+        break
+      }
+      if next_ch == 33 && j + 1 < len && text[j + 1] == 91 {
         break
       }
       j = j + 1
     }
     if j > i {
-      inlines.push(@ast.Text(text[i:j].to_owned()))
+      let content = text[i:j].to_owned()
+      advance_range(i, j)
+      let end_pos_span = current_pos()
+      let span = @ast.Span::{ start: start_pos_span, end: end_pos_span }
+      inlines.push(@ast.Text(span, content))
       i = j
     } else {
-      inlines.push(@ast.Text(ch.to_string()))
-      i = i + 1
+      let ch_fallback = text[i]
+      let step = if ch_fallback >= 55296 && ch_fallback <= 56319 && i + 1 < len { 2 } else { 1 }
+      let content = text[i:i + step].to_owned()
+      advance_range(i, i + step)
+      let end_pos_span = current_pos()
+      let span = @ast.Span::{ start: start_pos_span, end: end_pos_span }
+      inlines.push(@ast.Text(span, content))
+      i = i + step
     }
   }
 

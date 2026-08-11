@@ -34,24 +34,24 @@ pub fn Renderer::render(self : Renderer, doc : @ast.Document) -> String {
 ///|
 fn Renderer::render_block(self : Renderer, block : @ast.Block) -> Unit {
   match block {
-    @ast.Heading(level, inlines) => {
+    @ast.Heading(_, level, inlines) => {
       self.out = self.out + "<h" + level.to_string() + ">"
       self.render_inlines(inlines)
       self.out = self.out + "</h" + level.to_string() + ">\n"
     }
-    @ast.Paragraph(inlines) => {
+    @ast.Paragraph(_, inlines) => {
       self.out = self.out + "<p>"
       self.render_inlines(inlines)
       self.out = self.out + "</p>\n"
     }
-    @ast.Blockquote(blocks) => {
+    @ast.Blockquote(_, blocks) => {
       self.out = self.out + "<blockquote>\n"
       for i = 0; i < blocks.length(); i = i + 1 {
         self.render_block(blocks[i])
       }
       self.out = self.out + "</blockquote>\n"
     }
-    @ast.CodeBlock(info, code) => {
+    @ast.CodeBlock(_, info, code) => {
       let lang_class = if info.length() > 0 {
         " class=\"language-" + escape_html(info) + "\""
       } else {
@@ -64,7 +64,7 @@ fn Renderer::render_block(self : Renderer, block : @ast.Block) -> Unit {
         escape_html(code) +
         "</code></pre>\n"
     }
-    @ast.List(is_ordered, items) => {
+    @ast.List(_, is_ordered, items) => {
       let tag = if is_ordered { "ol" } else { "ul" }
       self.out = self.out + "<" + tag + ">\n"
       for i = 0; i < items.length(); i = i + 1 {
@@ -87,25 +87,25 @@ fn Renderer::render_inlines(
 ) -> Unit {
   for i = 0; i < inlines.length(); i = i + 1 {
     match inlines[i] {
-      @ast.Text(s) => self.out = self.out + escape_html(s)
-      @ast.Strong(inner) => {
+      @ast.Text(_, s) => self.out = self.out + escape_html(s)
+      @ast.Strong(_, inner) => {
         self.out = self.out + "<strong>"
         self.render_inlines(inner)
         self.out = self.out + "</strong>"
       }
-      @ast.Emph(inner) => {
+      @ast.Emph(_, inner) => {
         self.out = self.out + "<em>"
         self.render_inlines(inner)
         self.out = self.out + "</em>"
       }
-      @ast.CodeSpan(c) =>
+      @ast.CodeSpan(_, c) =>
         self.out = self.out + "<code>" + escape_html(c) + "</code>"
-      @ast.Link(url, inner) => {
+      @ast.Link(_, url, inner) => {
         self.out = self.out + "<a href=\"" + escape_html(url) + "\">"
         self.render_inlines(inner)
         self.out = self.out + "</a>"
       }
-      @ast.Image(url, alt) =>
+      @ast.Image(_, url, alt) =>
         self.out = self.out +
           "<img src=\"" +
           escape_html(url) +

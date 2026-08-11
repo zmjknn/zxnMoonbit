@@ -16,11 +16,13 @@
 pub struct Lexer {
   input : String
   mut pos : Int
+  mut line : Int
+  mut col : Int
 }
 
 ///|
 pub fn Lexer::new(input : String) -> Lexer {
-  { input, pos: 0 }
+  { input, pos: 0, line: 1, col: 1 }
 }
 
 ///|
@@ -43,8 +45,20 @@ pub fn Lexer::peek(self : Lexer) -> Char {
 ///|
 pub fn Lexer::advance(self : Lexer) -> Unit {
   if !self.is_eof() {
+    let ch = self.peek()
+    if ch == '\n' {
+      self.line = self.line + 1
+      self.col = 1
+    } else {
+      self.col = self.col + 1
+    }
     self.pos = self.pos + 1
   }
+}
+
+///|
+pub fn Lexer::get_pos(self : Lexer) -> @ast.Position {
+  { line: self.line, column: self.col }
 }
 
 ///|

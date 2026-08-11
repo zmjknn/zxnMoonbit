@@ -2,3 +2,5 @@ target/
 .moon/
 _build/
 *.wasm
+.mooncakes/
+.repos/
