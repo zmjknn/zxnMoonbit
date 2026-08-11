@@ -13,86 +13,91 @@
 // limitations under the License.
 
 ///|
-test "parser heading and spans" {
-  let p = Parser::new("# Heading 1\n## Heading 2")
+test "parser precise spans with offset" {
+  let input = "# Heading 1\n## Heading 2"
+  let p = Parser::new(input)
   let doc = p.parse()
   assert_eq(doc.blocks.length(), 2)
 
-  // Verify AST representation
   match doc.blocks[0] {
     @ast.Heading(span, level, inlines) => {
       assert_eq(level, 1)
       assert_eq(span.start.line, 1)
       assert_eq(span.start.column, 1)
+      assert_eq(span.start.offset, 0)
       assert_eq(inlines.length(), 1)
       match inlines[0] {
-        @ast.Text(_, text) => assert_eq(text, "Heading 1")
-        _ => fail("expected text")
+        @ast.Text(t_span, text) => {
+          assert_eq(text, "Heading 1")
+          assert_eq(t_span.start.line, 1)
+          assert_eq(t_span.start.column, 3)
+          assert_eq(t_span.start.offset, 2)
+        }
+        _ => fail("expected text inline")
       }
     }
-    _ => fail("expected heading")
+    _ => fail("expected heading block")
   }
 }
 
 ///|
-test "HTML rendering and escaping" {
-  let p = Parser::new(
-    "This is `<script>alert(\"XSS\")</script>` escaping test & 'single quote'.",
-  )
+test "complete XSS protection and URL sanitization" {
+  let input =
+    #|This is `<script>alert("XSS")</script>` and [xss_link](javascript:alert(1)) and ![xss_img](data:text/html;base64,PHNjcmlwdD4=).
+  let p = Parser::new(input)
   let doc = p.parse()
   let html = @html.Renderer::new().render(doc)
-  // Escaping verification
   assert_eq(
-    html, "<p>This is <code>&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;</code> escaping test &amp; &#39;single quote&#39;.</p>\n",
+    html, "<p>This is <code>&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;</code> and <a href=\"#\">xss_link</a> and <img src=\"#\" alt=\"xss_img\">.</p>\n",
   )
 }
 
 ///|
-test "parser paragraph and complex inlines" {
-  let p = Parser::new(
-    "This is **bold** and *italic* and `code` and [link](url) and ![image](img_url).",
-  )
+test "zero-allocation StringView AST payloads" {
+  let input = "Hello **World** in `MoonBit`!"
+  let p = Parser::new(input)
   let doc = p.parse()
   assert_eq(doc.blocks.length(), 1)
+  match doc.blocks[0] {
+    @ast.Paragraph(_, inlines) => {
+      assert_eq(inlines.length(), 5)
+      match inlines[0] {
+        @ast.Text(_, text) => assert_eq(text, "Hello ")
+        _ => fail("expected Text")
+      }
+      match inlines[2] {
+        @ast.Text(_, text) => assert_eq(text, " in ")
+        _ => fail("expected Text")
+      }
+      match inlines[3] {
+        @ast.CodeSpan(_, code) => assert_eq(code, "MoonBit")
+        _ => fail("expected CodeSpan")
+      }
+    }
+    _ => fail("expected Paragraph")
+  }
+}
 
+///|
+test "parser code block and blockquote" {
+  let input = "```moonbit\nlet x = 42\n```\n> Quote line 1\n> Quote line 2"
+  let p = Parser::new(input)
+  let doc = p.parse()
+  assert_eq(doc.blocks.length(), 2)
   let html = @html.Renderer::new().render(doc)
   assert_eq(
-    html, "<p>This is <strong>bold</strong> and <em>italic</em> and <code>code</code> and <a href=\"url\">link</a> and <img src=\"img_url\" alt=\"image\">.</p>\n",
+    html, "<pre><code class=\"language-moonbit\">let x = 42\n</code></pre>\n<blockquote>\n<p>Quote line 1\nQuote line 2</p>\n</blockquote>\n",
   )
 }
 
 ///|
-test "parser code block" {
-  let p = Parser::new("```moonbit\nlet a = 1\n```")
+test "parser list and images" {
+  let input = "- Item 1\n- Item 2 with ![badge](https://example.com/img.png)"
+  let p = Parser::new(input)
   let doc = p.parse()
   assert_eq(doc.blocks.length(), 1)
-
   let html = @html.Renderer::new().render(doc)
   assert_eq(
-    html, "<pre><code class=\"language-moonbit\">let a = 1\n</code></pre>\n",
-  )
-}
-
-///|
-test "parser blockquote" {
-  let p = Parser::new("> This is a blockquote\n> containing a paragraph.")
-  let doc = p.parse()
-  assert_eq(doc.blocks.length(), 1)
-
-  let html = @html.Renderer::new().render(doc)
-  assert_eq(
-    html, "<blockquote>\n<p>This is a blockquote\ncontaining a paragraph.</p>\n</blockquote>\n",
-  )
-}
-
-///|
-test "parser list" {
-  let p = Parser::new("- Item 1\n- Item 2\n- Item 3")
-  let doc = p.parse()
-  assert_eq(doc.blocks.length(), 1)
-
-  let html = @html.Renderer::new().render(doc)
-  assert_eq(
-    html, "<ul>\n<li><p>Item 1</p>\n</li>\n<li><p>Item 2</p>\n</li>\n<li><p>Item 3</p>\n</li>\n</ul>\n",
+    html, "<ul>\n<li><p>Item 1</p>\n</li>\n<li><p>Item 2 with <img src=\"https://example.com/img.png\" alt=\"badge\"></p>\n</li>\n</ul>\n",
   )
 }

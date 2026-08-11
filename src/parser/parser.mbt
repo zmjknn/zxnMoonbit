@@ -38,7 +38,7 @@ fn Parser::parse_heading(self : Parser) -> @ast.Block? {
     while !self.lexer.is_eof() && self.lexer.peek() != '\n' {
       self.lexer.advance()
     }
-    let content = self.lexer.input[start_idx:self.lexer.pos].trim().to_owned()
+    let content = self.lexer.input[start_idx:self.lexer.pos].trim()
     if self.lexer.peek() == '\n' {
       self.lexer.advance()
     }
@@ -71,7 +71,7 @@ fn Parser::parse_fenced_code_block(self : Parser) -> @ast.Block? {
   while self.lexer.peek() != '\n' && !self.lexer.is_eof() {
     self.lexer.advance()
   }
-  let info = self.lexer.input[info_start:self.lexer.pos].trim().to_owned()
+  let info = self.lexer.input[info_start:self.lexer.pos].trim()
   if self.lexer.peek() == '\n' {
     self.lexer.advance()
   }
@@ -92,7 +92,7 @@ fn Parser::parse_fenced_code_block(self : Parser) -> @ast.Block? {
     self.lexer.pos = saved_pos
     self.lexer.advance()
   }
-  let code = self.lexer.input[code_start:self.lexer.pos].to_owned()
+  let code = self.lexer.input[code_start:self.lexer.pos]
 
   // Advance past closing fence
   while self.lexer.peek() == '`' {
@@ -125,8 +125,8 @@ fn Parser::parse_blockquote(self : Parser) -> @ast.Block? {
     while !self.lexer.is_eof() && self.lexer.peek() != '\n' {
       self.lexer.advance()
     }
-    let line = self.lexer.input[start_idx:self.lexer.pos].to_owned()
-    inner = inner + line
+    let line = self.lexer.input[start_idx:self.lexer.pos]
+    inner = inner + line.to_owned()
     if self.lexer.peek() == '\n' {
       inner = inner + "\n"
       self.lexer.advance()
@@ -261,7 +261,7 @@ fn Parser::parse_paragraph(self : Parser) -> @ast.Block? {
       self.lexer.advance()
     }
   }
-  let content = self.lexer.input[start_idx:self.lexer.pos].trim().to_owned()
+  let content = self.lexer.input[start_idx:self.lexer.pos].trim()
   if content.length() > 0 {
     let end_pos = self.lexer.get_pos()
     let span = @ast.Span::{ start: start_pos, end: end_pos }
@@ -277,7 +277,7 @@ fn dummy_unused_suppress() -> Unit {
 
 ///|
 pub fn Parser::parse(self : Parser) -> @ast.Document {
-  let start_pos = @ast.Position::{ line: 1, column: 1 }
+  let start_pos = @ast.Position::{ line: 1, column: 1, offset: 0 }
   let blocks = []
   while !self.lexer.is_eof() {
     self.lexer.skip_whitespace()

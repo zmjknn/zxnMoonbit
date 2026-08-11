@@ -58,7 +58,7 @@ pub fn Lexer::advance(self : Lexer) -> Unit {
 
 ///|
 pub fn Lexer::get_pos(self : Lexer) -> @ast.Position {
-  { line: self.line, column: self.col }
+  { line: self.line, column: self.col, offset: self.pos }
 }
 
 ///|

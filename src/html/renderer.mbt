@@ -32,6 +32,48 @@ pub fn Renderer::render(self : Renderer, doc : @ast.Document) -> String {
 }
 
 ///|
+pub fn sanitize_url(url : StringView) -> String {
+  let trimmed = url.trim()
+  let len = trimmed.length()
+
+  let mut colon_idx = -1
+  for i = 0; i < len; i = i + 1 {
+    let ch = trimmed[i]
+    if ch == 58 { // ':'
+      colon_idx = i
+      break
+    }
+    if ch == 32 || ch == 47 || ch == 63 || ch == 35 {
+      break
+    }
+  }
+
+  if colon_idx > 0 {
+    let mut scheme = ""
+    for i = 0; i < colon_idx; i = i + 1 {
+      let ch = trimmed[i]
+      let lower_ch = if ch >= 65 && ch <= 90 { ch + 32 } else { ch }
+      match lower_ch.to_int().to_char() {
+        Some(c) => scheme = scheme + c.to_string()
+        None => ()
+      }
+    }
+
+    if scheme == "javascript" || scheme == "vbscript" || scheme == "file" {
+      return "#"
+    }
+    if scheme == "data" {
+      let s = trimmed.to_owned()
+      if !s.has_prefix("data:image/") {
+        return "#"
+      }
+    }
+  }
+
+  escape_html(trimmed)
+}
+
+///|
 fn Renderer::render_block(self : Renderer, block : @ast.Block) -> Unit {
   match block {
     @ast.Heading(_, level, inlines) => {
@@ -101,14 +143,14 @@ fn Renderer::render_inlines(
       @ast.CodeSpan(_, c) =>
         self.out = self.out + "<code>" + escape_html(c) + "</code>"
       @ast.Link(_, url, inner) => {
-        self.out = self.out + "<a href=\"" + escape_html(url) + "\">"
+        self.out = self.out + "<a href=\"" + sanitize_url(url) + "\">"
         self.render_inlines(inner)
         self.out = self.out + "</a>"
       }
       @ast.Image(_, url, alt) =>
         self.out = self.out +
           "<img src=\"" +
-          escape_html(url) +
+          sanitize_url(url) +
           "\" alt=\"" +
           escape_html(alt) +
           "\">"
