@@ -1,0 +1,15 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "zmjknn/moonmark/src/cli/path"
+
+// Values
+pub fn output_path(String, String, String) -> String
+
+pub fn replace_ext_html(String) -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
