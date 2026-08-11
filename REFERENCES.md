@@ -23,3 +23,13 @@ MoonMark refers to and incorporates architectural principles from the following 
   - Zero-allocation state-machine lexing model.
   - Event-driven string slice parsing concepts using string views.
   - CommonMark compliance test case structure and span mapping.
+
+---
+
+## 3. Runtime dependency: moonbitlang/x
+
+- **Project Name**: `moonbitlang/x`
+- **Repository Link**: [https://github.com/moonbitlang/x](https://github.com/moonbitlang/x)
+- **Declared Version**: `0.4.46` in `moon.mod`
+- **License**: Apache-2.0, as declared by the dependency module and its source headers.
+- **Distribution Boundary**: MoonMark declares this package as a Moon dependency; its source is not copied into this repository. Downstream distributions should preserve the dependency's own license notices when bundling it.

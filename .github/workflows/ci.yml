@@ -17,32 +17,17 @@ jobs:
       - name: Setup MoonBit
         uses: moonbitlang/setup-moonbit@v1
 
-      - name: Moon CI Checks
-        shell: bash
-        run: |
-          # Helper wrapper to handle --deny-warn for fmt and info if the CLI doesn't support them
-          moon() {
-            if [ "$1" = "fmt" ] || [ "$1" = "info" ]; then
-              local args=()
-              for arg in "$@"; do
-                if [ "$arg" != "--deny-warn" ]; then
-                  args+=("$arg")
-                fi
-              done
-              command moon "${args[@]}"
-            else
-              command moon "$@"
-            fi
-          }
-          
-          echo "=== 1. Moon Check ==="
-          moon check --deny-warn
-          
-          echo "=== 2. Moon Fmt --deny-warn ==="
-          moon fmt --deny-warn
-          
-          echo "=== 3. Moon Info --deny-warn ==="
-          moon info --deny-warn
-          
-          echo "=== 4. Moon Test ==="
-          moon test --deny-warn
+      - name: Moon format check
+        run: moon fmt --check
+
+      - name: Moon type check
+        run: moon check --deny-warn
+
+      - name: Moon tests
+        run: moon test --deny-warn
+
+      - name: Moon benchmarks
+        run: moon bench
+
+      - name: CLI smoke test
+        run: moon run src/cli -- --help
