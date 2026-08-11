@@ -21,6 +21,11 @@ jobs:
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
           "$HOME/.moon/bin/moon" version
 
+      - name: Resolve MoonBit dependencies
+        run: |
+          moon update
+          moon install
+
       - name: Moon format check
         run: moon fmt --check
 
