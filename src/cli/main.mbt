@@ -115,30 +115,41 @@ fn convert_files(files : Array[String], output_dir : String) -> Unit {
   for i = 0; i < files.length(); i = i + 1 {
     let file = files[i]
     let filename = get_filename(file)
-    let out_name = replace_ext_html(filename)
-    let out_path = output_dir + "/" + out_name
+    let out_path = @path.output_path(output_dir, "", filename)
     convert_single_file(file, Some(out_path))
   }
 }
 
 ///|
 fn convert_directory(input_dir : String, output_dir : String) -> Unit {
-  try {
-    let entries = @fs.read_dir(input_dir)
-    let md_files = []
-    for i = 0; i < entries.length(); i = i + 1 {
-      let entry = entries[i]
-      if entry.has_suffix(".md") || entry.has_suffix(".markdown") {
-        md_files.push(input_dir + "/" + entry)
-      }
-    }
-    if md_files.length() == 0 {
-      println("Notice: No markdown files (.md) found in '\{input_dir}'.")
-      return
-    }
-    convert_files(md_files, output_dir)
-  } catch {
+  convert_directory_recursive(input_dir, output_dir, "") catch {
     _ => println("Error: Failed to read directory '\{input_dir}'.")
+  }
+}
+
+///|
+fn convert_directory_recursive(
+  input_dir : String,
+  output_dir : String,
+  relative_dir : String,
+) -> Unit raise {
+  let entries = @fs.read_dir(input_dir)
+  for i = 0; i < entries.length(); i = i + 1 {
+    let entry = entries[i]
+    let input_path = input_dir + "/" + entry
+    if @fs.is_dir(input_path) {
+      let child_relative = if relative_dir.length() == 0 {
+        entry
+      } else {
+        relative_dir + "/" + entry
+      }
+      convert_directory_recursive(input_path, output_dir, child_relative)
+    } else if entry.has_suffix(".md") || entry.has_suffix(".markdown") {
+      convert_single_file(
+        input_path,
+        Some(@path.output_path(output_dir, relative_dir, entry)),
+      )
+    }
   }
 }
 
@@ -179,17 +190,6 @@ fn get_filename(file_path : String) -> String {
     file_path[last_slash + 1:file_path.length()].to_owned()
   } else {
     file_path
-  }
-}
-
-///|
-fn replace_ext_html(filename : String) -> String {
-  if filename.has_suffix(".md") {
-    filename[0:filename.length() - 3].to_owned() + ".html"
-  } else if filename.has_suffix(".markdown") {
-    filename[0:filename.length() - 9].to_owned() + ".html"
-  } else {
-    filename + ".html"
   }
 }
 

@@ -12,20 +12,20 @@ MoonMark is a lightweight, blazing-fast Markdown parser and HTML rendering engin
 
 ## 🌟 Key Features & Implementation Guarantees
 
-### 1. 🚀 Zero-Allocation Parsing Architecture
-- **Memory View Design**: All text payloads in AST nodes (`Text`, `CodeSpan`, `Link`, `Image`, `CodeBlock`) store native MoonBit `StringView` slices.
-- **Zero Heap Copy Guarantee**: During parsing, the engine creates zero new `String` heap allocations for text spans, achieving sub-5-microsecond benchmark performance.
+### 1. 🚀 StringView-Backed Parsing Architecture
+- **Memory View Design**: Text payloads in AST nodes (`Text`, `CodeSpan`, `Link`, `Image`, `CodeBlock`) use native MoonBit `StringView` slices when the parser can preserve the source slice.
+- **Measured, Not Guaranteed**: Flat block/inline parsing avoids copying text spans; normalized nested blocks may allocate temporary source buffers. Benchmark results depend on the toolchain and machine.
 
 ### 2. 📍 Precise Source Mapping (Span Tracking)
 - The `Position` struct tracks **1-based line numbers**, **1-based column numbers**, and **0-based character offsets**.
 - Every `Block` and `Inline` AST node contains exact `span : Span` metadata (`start` and `end`), ideal for IDE syntax highlighting, diagnostic linters, and refactoring tools.
 
-### 3. 🛡️ Complete XSS Defense Protection
+### 3. 🛡️ Defensive HTML Rendering
 - **HTML Entity Escaping**: Strict escaping for `<` (`&lt;`), `>` (`&gt;`), `&` (`&amp;`), `"` (`&quot;`), and `'` (`&#39;`).
-- **URL Protocol Sanitization (`sanitize_url`)**: Performs URL scheme scanning on `Link` and `Image` targets, neutralizing malicious payloads (`javascript:`, `vbscript:`, `file:`, `data:text/html`) into safe `#` links.
+- **URL Protocol Sanitization (`sanitize_url`)**: Scans `Link` and `Image` schemes, rejects `javascript:`, `vbscript:`, `file:`, and unsafe `data:` payloads, and escapes safe values before placing them in attributes. This is a renderer defense layer, not a replacement for a Content Security Policy.
 
 ### 4. 📦 Batch Conversion & Powerful CLI
-- **Out-of-the-Box CLI**: Supports single-file conversion, multi-file batch conversion (`--batch`), and directory batch processing (`--dir`).
+- **Out-of-the-Box CLI**: Supports single-file conversion, multi-file batch conversion (`--batch`), and recursive directory batch processing (`--dir`) while preserving relative subdirectories.
 - **Auto Directory Creation**: Automatically invokes filesystem APIs to create missing target directories.
 
 ---
@@ -47,7 +47,7 @@ moonmark/
 
 ### 1. Install MoonBit Toolchain
 
-Ensure the MoonBit toolchain is installed (v0.10.3 or higher recommended):
+Install a stable MoonBit toolchain compatible with this module, then verify it with:
 ```bash
 moon version
 ```
@@ -94,9 +94,10 @@ moon run src/cli -- --batch README.md README_zh.md -o dist/
 ```
 
 ### 4. Directory Batch Conversion (`--dir` / `-d`)
-Converts all `.md` files in the specified input directory to `.html` in the target folder:
+Recursively converts all `.md` and `.markdown` files in the specified input directory to `.html` in the target folder, preserving relative subdirectories:
 ```bash
 moon run src/cli -- --dir docs/ -o dist/
+# docs/guide/start.md -> dist/guide/start.html
 ```
 
 ### 5. Help Menu

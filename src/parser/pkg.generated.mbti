@@ -16,6 +16,7 @@ pub struct Lexer {
   mut pos : Int
   mut line : Int
   mut col : Int
+  positions : Array[@ast.Position]?
 }
 pub fn Lexer::advance(Self) -> Unit
 pub fn Lexer::get_pos(Self) -> @ast.Position
