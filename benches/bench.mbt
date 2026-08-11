@@ -13,12 +13,33 @@
 // limitations under the License.
 
 ///|
-test (b : @bench.T) {
-  let demo = "## MoonMark\n一个纯 MoonBit 实现的解析器！\n- 列表项 1\n- 列表项 2\n> 引用内容\n`inline code` and **bold** and *italic* and ![图片](url)."
-  b.bench(fn() {
-    let parser = @parser.Parser::new(demo)
+fn benchmark_case(bench : @bench.T, markdown : String) -> Unit {
+  bench.bench(fn() {
+    let parser = @parser.Parser::new(markdown)
     let ast = parser.parse()
     let html = @html.Renderer::new().render(ast)
-    b.keep(html)
+    bench.keep(html)
   })
+}
+
+///|
+test "flat markdown" (bench : @bench.T) {
+  benchmark_case(
+    bench, "A plain paragraph with **strong**, *emphasis*, `code`, and [a link](https://example.com).",
+  )
+}
+
+///|
+test "structured markdown" (bench : @bench.T) {
+  benchmark_case(
+    bench, "## MoonMark\n\n- first item\n- second item with ![image](https://example.com/a.png)\n\n> quote\n\n```moonbit\nlet answer = 42\n```",
+  )
+}
+
+///|
+test "unicode and nested markdown" (bench : @bench.T) {
+  benchmark_case(
+    bench,
+    ("中文段落与 emoji 😀。" + "\n\n" + "**嵌套文本** ").repeat(8),
+  )
 }

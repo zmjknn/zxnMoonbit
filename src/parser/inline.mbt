@@ -17,6 +17,16 @@ pub fn parse_inline(
   text : StringView,
   start_pos : @ast.Position,
 ) -> Array[@ast.Inline] {
+  parse_inline_with_positions(text, start_pos, None, 0)
+}
+
+///|
+fn parse_inline_with_positions(
+  text : StringView,
+  start_pos : @ast.Position,
+  positions : Array[@ast.Position]?,
+  map_start : Int,
+) -> Array[@ast.Inline] {
   let inlines = []
   let mut i = 0
   let len = text.length()
@@ -30,15 +40,24 @@ pub fn parse_inline(
   }
 
   fn advance_range(start_idx : Int, end_idx : Int) {
-    for idx = start_idx; idx < end_idx; idx = idx + 1 {
-      let ch = text[idx]
-      if ch == 10 { // '\n'
-        line = line + 1
-        col = 1
-      } else {
-        col = col + 1
+    match positions {
+      Some(source_positions) => {
+        let end_pos = source_positions[map_start + end_idx]
+        line = end_pos.line
+        col = end_pos.column
+        offset = end_pos.offset
       }
-      offset = offset + 1
+      None =>
+        for idx = start_idx; idx < end_idx; idx = idx + 1 {
+          let ch = text[idx]
+          if ch == 10 { // '\n'
+            line = line + 1
+            col = 1
+          } else {
+            col = col + 1
+          }
+          offset = offset + 1
+        }
     }
   }
 
@@ -124,7 +143,12 @@ pub fn parse_inline(
           let inner_start_pos = current_pos()
 
           // Parse inner inlines
-          let inner_inlines = parse_inline(inner_text, inner_start_pos)
+          let inner_inlines = parse_inline_with_positions(
+            inner_text,
+            inner_start_pos,
+            positions,
+            map_start + i + 2,
+          )
 
           // Advance over inner text and closing `**`
           advance_range(i + 2, j + 2)
@@ -148,7 +172,12 @@ pub fn parse_inline(
           let inner_start_pos = current_pos()
 
           // Parse inner inlines
-          let inner_inlines = parse_inline(inner_text, inner_start_pos)
+          let inner_inlines = parse_inline_with_positions(
+            inner_text,
+            inner_start_pos,
+            positions,
+            map_start + i + 1,
+          )
 
           // Advance over inner text and closing `*`
           advance_range(i + 1, j + 1)
@@ -200,7 +229,12 @@ pub fn parse_inline(
           let inner_start_pos = current_pos()
 
           // Parse inner inlines
-          let inner_inlines = parse_inline(link_text, inner_start_pos)
+          let inner_inlines = parse_inline_with_positions(
+            link_text,
+            inner_start_pos,
+            positions,
+            map_start + i + 1,
+          )
 
           // Advance over inner text and closing `](url)`
           advance_range(i + 1, k + 1)

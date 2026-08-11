@@ -23,6 +23,37 @@ pub fn Parser::new(input : String) -> Parser {
 }
 
 ///|
+fn Parser::new_with_positions(
+  input : String,
+  positions : Array[@ast.Position],
+) -> Parser {
+  { lexer: Lexer::new_with_positions(input, positions) }
+}
+
+///|
+fn is_trim_char(ch : UInt16) -> Bool {
+  ch == 32 || ch == 9 || ch == 13 || ch == 10
+}
+
+///|
+fn trim_start_index(input : String, start : Int, end : Int) -> Int {
+  let mut index = start
+  while index < end && is_trim_char(input[index]) {
+    index = index + 1
+  }
+  index
+}
+
+///|
+fn trim_end_index(input : String, start : Int, end : Int) -> Int {
+  let mut index = end
+  while index > start && is_trim_char(input[index - 1]) {
+    index = index - 1
+  }
+  index
+}
+
+///|
 fn Parser::parse_heading(self : Parser) -> @ast.Block? {
   self.lexer.skip_whitespace()
   let start_pos = self.lexer.get_pos()
@@ -34,18 +65,37 @@ fn Parser::parse_heading(self : Parser) -> @ast.Block? {
   if level > 0 && self.lexer.peek() == ' ' {
     self.lexer.advance()
     let start_idx = self.lexer.pos
-    let inline_start_pos = self.lexer.get_pos()
     while !self.lexer.is_eof() && self.lexer.peek() != '\n' {
       self.lexer.advance()
     }
-    let content = self.lexer.input[start_idx:self.lexer.pos].trim()
+    let content_start = trim_start_index(
+      self.lexer.input,
+      start_idx,
+      self.lexer.pos,
+    )
+    let content_end = trim_end_index(
+      self.lexer.input,
+      content_start,
+      self.lexer.pos,
+    )
+    let content = self.lexer.input[content_start:content_end]
+    let inline_start_pos = self.lexer.get_pos_at(content_start)
     if self.lexer.peek() == '\n' {
       self.lexer.advance()
     }
     let end_pos = self.lexer.get_pos()
     let span = @ast.Span::{ start: start_pos, end: end_pos }
     return Some(
-      @ast.Heading(span, level, parse_inline(content, inline_start_pos)),
+      @ast.Heading(
+        span,
+        level,
+        parse_inline_with_positions(
+          content,
+          inline_start_pos,
+          self.lexer.get_positions(),
+          content_start,
+        ),
+      ),
     )
   }
   None
@@ -120,6 +170,7 @@ fn Parser::parse_blockquote(self : Parser) -> @ast.Block? {
   }
 
   let mut inner = ""
+  let inner_positions = []
   while !self.lexer.is_eof() {
     let start_idx = self.lexer.pos
     while !self.lexer.is_eof() && self.lexer.peek() != '\n' {
@@ -127,7 +178,11 @@ fn Parser::parse_blockquote(self : Parser) -> @ast.Block? {
     }
     let line = self.lexer.input[start_idx:self.lexer.pos]
     inner = inner + line.to_owned()
+    for i = start_idx; i < self.lexer.pos; i = i + 1 {
+      inner_positions.push(self.lexer.get_pos_at(i))
+    }
     if self.lexer.peek() == '\n' {
+      inner_positions.push(self.lexer.get_pos())
       inner = inner + "\n"
       self.lexer.advance()
       self.lexer.skip_whitespace()
@@ -141,7 +196,8 @@ fn Parser::parse_blockquote(self : Parser) -> @ast.Block? {
       }
     }
   }
-  let inner_p = Parser::new(inner)
+  inner_positions.push(self.lexer.get_pos())
+  let inner_p = Parser::new_with_positions(inner, inner_positions)
   let end_pos = self.lexer.get_pos()
   let span = @ast.Span::{ start: start_pos, end: end_pos }
   Some(@ast.Blockquote(span, inner_p.parse().blocks))
@@ -187,6 +243,7 @@ fn Parser::parse_list(self : Parser) -> @ast.Block? {
 
   let items = []
   let mut item_start = self.lexer.pos
+  let mut item_start_pos = self.lexer.get_pos()
   while !self.lexer.is_eof() {
     let next_ch = self.lexer.peek()
     if next_ch == '\n' {
@@ -214,8 +271,10 @@ fn Parser::parse_list(self : Parser) -> @ast.Block? {
       }
 
       if is_next_item {
-        let current_item = self.lexer.input[item_start:saved_pos].to_owned()
-        let item_p = Parser::new(current_item)
+        let current_item_view = self.lexer.input[item_start:saved_pos]
+        let current_item = current_item_view.to_owned()
+        let item_positions = build_positions(current_item_view, item_start_pos)
+        let item_p = Parser::new_with_positions(current_item, item_positions)
         items.push(item_p.parse().blocks)
 
         if is_ordered {
@@ -229,14 +288,17 @@ fn Parser::parse_list(self : Parser) -> @ast.Block? {
           self.lexer.advance() // ' '
         }
         item_start = self.lexer.pos
+        item_start_pos = self.lexer.get_pos()
       }
     } else {
       self.lexer.advance()
     }
   }
   if self.lexer.pos > item_start {
-    let current_item = self.lexer.input[item_start:self.lexer.pos].to_owned()
-    let item_p = Parser::new(current_item)
+    let current_item_view = self.lexer.input[item_start:self.lexer.pos]
+    let current_item = current_item_view.to_owned()
+    let item_positions = build_positions(current_item_view, item_start_pos)
+    let item_p = Parser::new_with_positions(current_item, item_positions)
     items.push(item_p.parse().blocks)
   }
 
@@ -249,7 +311,6 @@ fn Parser::parse_list(self : Parser) -> @ast.Block? {
 fn Parser::parse_paragraph(self : Parser) -> @ast.Block? {
   let start_pos = self.lexer.get_pos()
   let start_idx = self.lexer.pos
-  let inline_start_pos = self.lexer.get_pos()
   while !self.lexer.is_eof() {
     let ch = self.lexer.peek()
     if ch == '\n' {
@@ -261,11 +322,31 @@ fn Parser::parse_paragraph(self : Parser) -> @ast.Block? {
       self.lexer.advance()
     }
   }
-  let content = self.lexer.input[start_idx:self.lexer.pos].trim()
+  let content_start = trim_start_index(
+    self.lexer.input,
+    start_idx,
+    self.lexer.pos,
+  )
+  let content_end = trim_end_index(
+    self.lexer.input,
+    content_start,
+    self.lexer.pos,
+  )
+  let content = self.lexer.input[content_start:content_end]
   if content.length() > 0 {
     let end_pos = self.lexer.get_pos()
     let span = @ast.Span::{ start: start_pos, end: end_pos }
-    return Some(@ast.Paragraph(span, parse_inline(content, inline_start_pos)))
+    return Some(
+      @ast.Paragraph(
+        span,
+        parse_inline_with_positions(
+          content,
+          self.lexer.get_pos_at(content_start),
+          self.lexer.get_positions(),
+          content_start,
+        ),
+      ),
+    )
   }
   None
 }
@@ -277,7 +358,7 @@ fn dummy_unused_suppress() -> Unit {
 
 ///|
 pub fn Parser::parse(self : Parser) -> @ast.Document {
-  let start_pos = @ast.Position::{ line: 1, column: 1, offset: 0 }
+  let start_pos = self.lexer.get_pos()
   let blocks = []
   while !self.lexer.is_eof() {
     self.lexer.skip_whitespace()

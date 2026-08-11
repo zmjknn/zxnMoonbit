@@ -32,8 +32,43 @@ pub fn Renderer::render(self : Renderer, doc : @ast.Document) -> String {
 }
 
 ///|
+fn is_url_control(ch : UInt16) -> Bool {
+  ch <= 32 || ch == 127
+}
+
+///|
+fn ascii_lower(ch : UInt16) -> UInt16 {
+  if ch >= 65 && ch <= 90 {
+    ch + 32
+  } else {
+    ch
+  }
+}
+
+///|
+fn equals_ascii_ignore_case(value : StringView, expected : StringView) -> Bool {
+  if value.length() != expected.length() {
+    return false
+  }
+  for i = 0; i < value.length(); i = i + 1 {
+    if ascii_lower(value[i]) != ascii_lower(expected[i]) {
+      return false
+    }
+  }
+  true
+}
+
+///|
 pub fn sanitize_url(url : StringView) -> String {
-  let trimmed = url.trim()
+  let mut start = 0
+  let mut end = url.length()
+  while start < end && is_url_control(url[start]) {
+    start = start + 1
+  }
+  while end > start && is_url_control(url[end - 1]) {
+    end = end - 1
+  }
+  let trimmed = url[start:end]
   let len = trimmed.length()
 
   let mut colon_idx = -1
@@ -43,28 +78,34 @@ pub fn sanitize_url(url : StringView) -> String {
       colon_idx = i
       break
     }
-    if ch == 32 || ch == 47 || ch == 63 || ch == 35 {
+    if is_url_control(ch) {
+      return "#"
+    }
+    if ch == 47 || ch == 63 || ch == 35 {
       break
     }
   }
 
   if colon_idx > 0 {
-    let mut scheme = ""
-    for i = 0; i < colon_idx; i = i + 1 {
-      let ch = trimmed[i]
-      let lower_ch = if ch >= 65 && ch <= 90 { ch + 32 } else { ch }
-      match lower_ch.to_int().to_char() {
-        Some(c) => scheme = scheme + c.to_string()
-        None => ()
-      }
-    }
-
-    if scheme == "javascript" || scheme == "vbscript" || scheme == "file" {
+    let scheme = trimmed[0:colon_idx]
+    if equals_ascii_ignore_case(scheme, "javascript") ||
+      equals_ascii_ignore_case(scheme, "vbscript") ||
+      equals_ascii_ignore_case(scheme, "file") {
       return "#"
     }
-    if scheme == "data" {
-      let s = trimmed.to_owned()
-      if !s.has_prefix("data:image/") {
+    if equals_ascii_ignore_case(scheme, "data") {
+      let media_start = colon_idx + 1
+      let mut media_end = media_start
+      while media_end < len &&
+            trimmed[media_end] != 59 &&
+            trimmed[media_end] != 44 {
+        media_end = media_end + 1
+      }
+      let media_type = trimmed[media_start:media_end]
+      if !equals_ascii_ignore_case(media_type, "image/png") &&
+        !equals_ascii_ignore_case(media_type, "image/jpeg") &&
+        !equals_ascii_ignore_case(media_type, "image/gif") &&
+        !equals_ascii_ignore_case(media_type, "image/webp") {
         return "#"
       }
     }
