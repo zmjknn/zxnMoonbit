@@ -16,6 +16,7 @@
 pub(all) struct Position {
   line : Int
   column : Int
+  offset : Int
 }
 
 ///|
@@ -26,12 +27,12 @@ pub(all) struct Span {
 
 ///|
 pub(all) enum Inline {
-  Text(Span, String)
+  Text(Span, StringView)
   Strong(Span, Array[Inline])
   Emph(Span, Array[Inline])
-  CodeSpan(Span, String)
-  Link(Span, String, Array[Inline])
-  Image(Span, String, String)
+  CodeSpan(Span, StringView)
+  Link(Span, StringView, Array[Inline])
+  Image(Span, StringView, StringView)
 }
 
 ///|
@@ -39,7 +40,7 @@ pub(all) enum Block {
   Heading(Span, Int, Array[Inline])
   Paragraph(Span, Array[Inline])
   Blockquote(Span, Array[Block])
-  CodeBlock(Span, String, String)
+  CodeBlock(Span, StringView, StringView)
   List(Span, Bool, Array[Array[Block]])
 }
 
