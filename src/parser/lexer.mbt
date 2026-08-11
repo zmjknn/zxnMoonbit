@@ -18,11 +18,20 @@ pub struct Lexer {
   mut pos : Int
   mut line : Int
   mut col : Int
+  positions : Array[@ast.Position]?
 }
 
 ///|
 pub fn Lexer::new(input : String) -> Lexer {
-  { input, pos: 0, line: 1, col: 1 }
+  { input, pos: 0, line: 1, col: 1, positions: None }
+}
+
+///|
+fn Lexer::new_with_positions(
+  input : String,
+  positions : Array[@ast.Position],
+) -> Lexer {
+  { input, pos: 0, line: 1, col: 1, positions: Some(positions) }
 }
 
 ///|
@@ -58,7 +67,57 @@ pub fn Lexer::advance(self : Lexer) -> Unit {
 
 ///|
 pub fn Lexer::get_pos(self : Lexer) -> @ast.Position {
-  { line: self.line, column: self.col, offset: self.pos }
+  match self.positions {
+    Some(positions) => positions[self.pos]
+    None => { line: self.line, column: self.col, offset: self.pos }
+  }
+}
+
+///|
+fn Lexer::get_pos_at(self : Lexer, index : Int) -> @ast.Position {
+  match self.positions {
+    Some(positions) => positions[index]
+    None => {
+      let mut line = 1
+      let mut column = 1
+      let mut i = 0
+      while i < index && i < self.input.length() {
+        if self.input[i] == '\n' {
+          line = line + 1
+          column = 1
+        } else {
+          column = column + 1
+        }
+        i = i + 1
+      }
+      { line, column, offset: index }
+    }
+  }
+}
+
+///|
+fn Lexer::get_positions(self : Lexer) -> Array[@ast.Position]? {
+  self.positions
+}
+
+///|
+fn build_positions(
+  text : StringView,
+  start_pos : @ast.Position,
+) -> Array[@ast.Position] {
+  let positions = []
+  let mut pos = start_pos
+  for i = 0; i <= text.length(); i = i + 1 {
+    positions.push(pos)
+    if i < text.length() {
+      if text[i] == '\n' {
+        pos = { line: pos.line + 1, column: 1, offset: pos.offset + 1 }
+      } else {
+        pos = { line: pos.line, column: pos.column + 1, offset: pos.offset + 1 }
+      }
+    }
+  }
+  positions
 }
 
 ///|

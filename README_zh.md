@@ -12,20 +12,20 @@ MoonMark 是一款完全使用 [MoonBit](https://www.moonbitlang.com/) 编写的
 
 ## 🌟 核心特性与申报承诺实现
 
-### 1. 🚀 零分配 (Zero-Allocation) 解析架构
-- **内存视图设计**：AST 节点（`Text`, `CodeSpan`, `Link`, `Image`, `CodeBlock`）中存储的文本元数据全部采用 MoonBit 原生的 `StringView` 内存视图切片。
-- **零堆分配保障**：在语法分析阶段，解析器无需为文本片段执行任何 `String` 堆内存分配与拷贝，实现极致解析性能（单次基准测试平均耗时低于 5 µs）。
+### 1. 🚀 基于 StringView 的解析架构
+- **内存视图设计**：AST 节点（`Text`、`CodeSpan`、`Link`、`Image`、`CodeBlock`）在能够保留源文本切片时使用 MoonBit 原生 `StringView`。
+- **以实测为准**：扁平的块级/行级解析会避免复制文本片段；blockquote/list 等嵌套结构在规范化输入时可能创建临时缓冲区，基准结果取决于工具链和机器。
 
 ### 2. 📍 精确 Span 位置追踪 (Precise Source Mapping)
 - `Position` 结构同时记录 **1-based 行号 (line)**、**1-based 列号 (column)** 以及 **0-based 字符偏移量 (offset)**。
 - 每一个 `Block` 和 `Inline` 语法树节点均包含精确的 `span : Span`（含 `start` 与 `end`），方便集成 IDE 语法高亮、错误诊断与代码重构工具。
 
-### 3. 🛡️ 完整 XSS 安全防护 (Complete XSS Protection)
+### 3. 🛡️ 防御式 HTML 渲染
 - **HTML 实体转义**：严格转义 `<` (`&lt;`), `>` (`&gt;`), `&` (`&amp;`), `"` (`&quot;`), `'` (`&#39;`) 等敏感字符。
-- **URL 协议清洗 (`sanitize_url`)**：自动对 `Link` 与 `Image` 节点中的目标 URL 进行协议扫描与防护，全面中和 `javascript:`, `vbscript:`, `file:`, `data:text/html` 等 XSS 注入 payload，将其安全重定向至 `#`。
+- **URL 协议清洗 (`sanitize_url`)**：扫描 `Link` 与 `Image` 目标协议，拒绝 `javascript:`、`vbscript:`、`file:` 及不安全的 `data:` 内容，并在写入属性前转义安全值。这是渲染器的防御层，不能替代 Content Security Policy。
 
 ### 4. 📦 批量转换与强大的 CLI
-- **开箱即用 CLI**：支持单文件转换、多文件批量转换（`--batch`）以及整目录递归转换（`--dir`）。
+- **开箱即用 CLI**：支持单文件转换、多文件批量转换（`--batch`）以及递归目录转换（`--dir`），并保留相对目录结构。
 - **目录自动创建**：输出目标路径若不存在，命令行工具会自动调用操作系统 API 创建目录结构。
 
 ---
@@ -47,7 +47,7 @@ moonmark/
 
 ### 1. 安装 MoonBit 工具链
 
-请确保安装了最新稳定版的 MoonBit 工具链（建议 v0.10.3 及以上）：
+请安装与本模块兼容的稳定版 MoonBit 工具链，并先检查版本：
 ```bash
 # 检查 MoonBit 版本
 moon version
@@ -96,9 +96,10 @@ moon run src/cli -- --batch README.md README_zh.md -o dist/
 ```
 
 ### 4. 目录批量转换模式 (`--dir` / `-d`)
-将输入目录下的所有 `.md` 文件批量渲染为 `.html` 并输出到目标文件夹：
+将输入目录及其子目录中的所有 `.md`、`.markdown` 文件批量渲染为 `.html`，并保留相对目录结构输出到目标文件夹：
 ```bash
 moon run src/cli -- --dir docs/ -o dist/
+# docs/guide/start.md -> dist/guide/start.html
 ```
 
 ### 5. 帮助菜单
