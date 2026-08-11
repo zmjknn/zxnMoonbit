@@ -16,10 +16,8 @@ jobs:
 
       - name: Install MoonBit
         shell: bash
-        env:
-          MOONBIT_VERSION: 0.1.20260713
         run: |
-          curl --fail --location https://cli.moonbitlang.com/install/unix.sh | bash -s -- "$MOONBIT_VERSION"
+          curl --fail --location https://cli.moonbitlang.com/install/unix.sh | bash
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
           "$HOME/.moon/bin/moon" version
 
