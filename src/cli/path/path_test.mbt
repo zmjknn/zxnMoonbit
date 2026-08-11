@@ -15,4 +15,8 @@
 ///|
 test "directory output preserves relative subdirectory" {
   assert_eq(output_path("dist", "guide", "start.md"), "dist/guide/start.html")
+  assert_eq(
+    output_path("dist", "guide", "start.markdown"),
+    "dist/guide/start.html",
+  )
 }

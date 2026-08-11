@@ -169,3 +169,34 @@ test "URL sanitization rejects case and control-character scheme bypasses" {
     "https://example.com/&quot; onerror=alert(1)",
   )
 }
+
+///|
+test "empty and Unicode documents keep stable boundaries" {
+  let empty = Parser::new("").parse()
+  assert_eq(empty.blocks.length(), 0)
+  assert_eq(empty.span.start.line, 1)
+  assert_eq(empty.span.start.column, 1)
+  assert_eq(empty.span.start.offset, 0)
+  assert_eq(empty.span.end.offset, 0)
+
+  let unicode = Parser::new("你好，MoonBit 😀").parse()
+  let html = @html.Renderer::new().render(unicode)
+  assert_eq(html, "<p>你好，MoonBit 😀</p>\n")
+}
+
+///|
+test "URL policy covers dangerous data and safe raster data" {
+  assert_eq(@html.sanitize_url(" file:///tmp/image.png "), "#")
+  assert_eq(
+    @html.sanitize_url("data:image/svg+xml,<svg onload=alert(1) />"),
+    "#",
+  )
+  assert_eq(
+    @html.sanitize_url("data:image/png;base64,AAAA"),
+    "data:image/png;base64,AAAA",
+  )
+  assert_eq(
+    @html.sanitize_url("  HTTPS://example.com/path  "),
+    "HTTPS://example.com/path",
+  )
+}
