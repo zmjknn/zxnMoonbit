@@ -128,7 +128,7 @@ moon run src/cli -- --help
 
 ## Validation Snapshot (this revision)
 
-The repository currently contains 15 `.mbt` source/test files and 12 automated tests. The test matrix covers AST spans, nested block reconstruction, HTML escaping, dangerous URL schemes, safe raster `data:` URLs, empty input, Unicode text, and relative CLI output paths.
+The repository currently contains 11 `.mbt` source/test files and 12 automated tests. The test matrix covers AST spans, nested block reconstruction, HTML escaping, dangerous URL schemes, safe raster `data:` URLs, empty input, Unicode text, and relative CLI output paths.
 
 The benchmark suite contains three named workloads in `benches/bench.mbt`. One local baseline, measured with `moon 0.1.20260713` on Windows, was:
 

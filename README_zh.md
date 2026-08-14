@@ -130,7 +130,7 @@ moon run src/cli -- --help
 
 ## 本版本验证快照
 
-当前仓库包含 15 个 `.mbt` 源码/测试文件和 12 个自动化测试，覆盖 AST Span、嵌套块重建、HTML 转义、危险 URL 协议、安全栅格图片 `data:` URL、空输入、Unicode 文本和 CLI 相对目录输出。
+当前仓库包含 11 个 `.mbt` 源码/测试文件和 12 个自动化测试，覆盖 AST Span、嵌套块重建、HTML 转义、危险 URL 协议、安全栅格图片 `data:` URL、空输入、Unicode 文本和 CLI 相对目录输出。
 
 基准模块 `benches/bench.mbt` 包含三个命名工作负载。使用 `moon 0.1.20260713` 在 Windows 上得到的一组本地基线如下：
 
